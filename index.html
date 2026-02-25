@@ -332,7 +332,8 @@
       transition: all 0.15s;
       user-select: none;
     }
-    .chip.selected { background: var(--green); border-color: var(--green); color: white; font-weight: 700; }
+    .chip.selected  { background: var(--green); border-color: var(--green); color: white; font-weight: 700; }
+    .chip.chip-add  { border-style: dashed; color: var(--green); font-weight: 600; }
     .chip:active { opacity: 0.7; }
 
     /* ── SUBMIT BUTTON ── */
@@ -731,10 +732,26 @@ function closeOrderModal() {
 }
 
 function renderChips() {
-  document.getElementById('customerGrid').innerHTML = S.customers.map(c => `
+  const chips = S.customers.map(c => `
     <div class="chip ${S.selCustId === c.id ? 'selected' : ''}" onclick="selectCust('${c.id}')">
       ${esc(c.name)}
     </div>`).join('');
+  const addChip = `<div class="chip chip-add" onclick="addCustomerInline()">+ New</div>`;
+  document.getElementById('customerGrid').innerHTML = chips + addChip;
+}
+
+function addCustomerInline() {
+  const name = prompt('Customer name:');
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  if (S.customers.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+    alert('Already exists.'); return;
+  }
+  const newCust = { id: uid(), name: trimmed };
+  S.customers.push(newCust);
+  saveC();
+  S.selCustId = newCust.id;
+  renderChips();
 }
 
 function selectCust(id) { S.selCustId = id; renderChips(); }
@@ -776,6 +793,7 @@ function openCustomersModal() {
 function closeCustomersModal() {
   document.getElementById('customersModal').classList.remove('open');
   document.getElementById('newCustInput').value = '';
+  renderChips(); // refresh order form chips if it's open
 }
 function renderCustList() {
   const el = document.getElementById('custList');
