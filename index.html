@@ -634,7 +634,7 @@ function cardHtml(o) {
       </div>
       <div class="order-item">${esc(itemLine || '—')}</div>
       <div class="order-bottom">
-        <div class="order-meta">${badge}<span class="order-time">${ago(o.createdAt)}</span></div>
+        <div class="order-meta">${badge}<span class="order-time">${o.status === 'paid' ? 'Paid ' + formatDate(o.paidAt) : 'Ordered ' + formatDate(o.createdAt)}</span></div>
         <div class="order-actions">${actions}</div>
       </div>
     </div>`;
@@ -642,6 +642,15 @@ function cardHtml(o) {
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const day  = d.getDate();
+  const mon  = d.toLocaleString('en', { month: 'short' });
+  const h    = String(d.getHours()).padStart(2, '0');
+  const min  = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${mon} ${h}:${min}`;
 }
 function ago(ts) {
   const d = Date.now() - ts;
