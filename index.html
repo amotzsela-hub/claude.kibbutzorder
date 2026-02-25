@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Orders">
+  <meta name="theme-color" content="#2d6a4f">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>Orders</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:        #2d6a4f;
+      --green-light:  #52b788;
+      --orange:       #e76f51;
+      --yellow:       #f4a261;
+      --paid-bg:      #d1f0e2;
+      --paid-text:    #1a6b40;
+      --bg:           #f4f6f4;
+      --card:         #ffffff;
+      --text:         #1a1a1a;
+      --muted:        #6b7280;
+      --border:       #e5e7eb;
+      --shadow:       0 1px 6px rgba(0,0,0,0.09);
+      --radius:       14px;
+      --safe-top:     env(safe-area-inset-top, 0px);
+      --safe-bottom:  env(safe-area-inset-bottom, 0px);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 430px;
+      margin: 0 auto;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--green);
+      color: white;
+      padding: calc(var(--safe-top) + 14px) 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-btn {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 7px 13px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      background: var(--green);
+      display: flex;
+      padding: 0 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 4px;
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.18s;
+      user-select: none;
+    }
+    .tab.active { color: white; border-bottom-color: white; }
+
+    /* ── CONTENT ── */
+    .content {
+      padding: 14px 14px calc(90px + var(--safe-bottom));
+    }
+
+    /* ── SUMMARY BAR ── */
+    .summary {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px 10px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 4px;
+    }
+    .summary-item { flex: 1; text-align: center; }
+    .summary-num  { font-size: 22px; font-weight: 800; color: var(--green); line-height: 1; }
+    .summary-label{ font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+
+    /* ── ALERT BANNER ── */
+    .banner {
+      background: #fff7e6;
+      border: 1px solid #f4a261;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #7c4a0e;
+    }
+
+    /* ── ORDER CARDS ── */
+    .order-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px 14px 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--border);
+    }
+    .order-card.status-ordered { border-left-color: var(--yellow); }
+    .order-card.status-ready   { border-left-color: var(--orange); }
+    .order-card.status-paid    { border-left-color: var(--green-light); opacity: 0.82; }
+
+    .order-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+    .customer-name { font-size: 17px; font-weight: 700; }
+    .order-price   { font-size: 17px; font-weight: 700; color: var(--green); }
+    .order-item    { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+
+    .order-bottom  { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .order-meta    { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .badge-ordered { background: #fff3cd; color: #7c4a0e; }
+    .badge-ready   { background: #fde8e4; color: #9c2f1a; }
+    .badge-paid    { background: var(--paid-bg); color: var(--paid-text); }
+
+    .order-time { font-size: 12px; color: var(--muted); }
+
+    .order-actions { display: flex; gap: 7px; }
+    .btn-action {
+      border: none;
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn-action:active { opacity: 0.65; }
+    .btn-ready  { background: var(--orange); color: white; }
+    .btn-paid   { background: var(--green);  color: white; }
+    .btn-edit   { background: var(--border); color: var(--muted); }
+    .btn-delete { background: #fee2e2; color: #b91c1c; }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center;
+      padding: 64px 20px;
+      color: var(--muted);
+    }
+    .empty .icon { font-size: 52px; margin-bottom: 12px; }
+    .empty p { font-size: 16px; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      border: none;
+      font-size: 30px;
+      box-shadow: 0 4px 18px rgba(45,106,79,0.45);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: transform 0.15s;
+    }
+    .fab:active { transform: translateX(-50%) scale(0.91); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: flex-end;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 22px 22px 0 0;
+      padding: 22px 18px calc(24px + var(--safe-bottom));
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.32,0,0.67,0);
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 18px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .modal-title { font-size: 20px; font-weight: 700; }
+    .modal-close {
+      background: var(--border);
+      border: none;
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+    }
+
+    /* ── VOICE BUTTON ── */
+    .voice-btn {
+      width: 100%;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin-bottom: 20px;
+      transition: background 0.2s;
+    }
+    .voice-btn.listening {
+      background: var(--orange);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.72} }
+
+    /* ── FORM ── */
+    .form-section { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 13px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      outline: none;
+      transition: border-color 0.18s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus { border-color: var(--green); }
+
+    .price-row { display: flex; align-items: center; gap: 10px; }
+    .price-row .form-input { width: 130px; }
+    .price-sym { font-size: 18px; font-weight: 600; color: var(--muted); }
+
+    /* ── CUSTOMER CHIPS ── */
+    .chip-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .chip {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 6px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .chip.selected { background: var(--green); border-color: var(--green); color: white; font-weight: 700; }
+    .chip:active { opacity: 0.7; }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-submit {
+      width: 100%;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: opacity 0.15s;
+    }
+    .btn-submit:active { opacity: 0.78; }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── CUSTOMERS LIST ── */
+    .cust-list { list-style: none; margin-bottom: 8px; }
+    .cust-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+    }
+    .cust-item:last-child { border-bottom: none; }
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 2px 8px;
+      line-height: 1;
+    }
+    .add-row { display: flex; gap: 10px; margin-top: 12px; }
+    .add-row .form-input { flex: 1; }
+    .btn-add {
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ── CONFIRM DIALOG ── */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 300;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: white;
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      width: 100%;
+      max-width: 310px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .confirm-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .confirm-msg   { font-size: 15px; color: var(--muted); margin-bottom: 20px; line-height: 1.4; }
+    .confirm-btns  { display: flex; gap: 10px; }
+    .confirm-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: var(--border); color: var(--text); }
+    .btn-ok     { background: var(--green);  color: white; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>🫘 Orders</h1>
+  <button class="header-btn" onclick="openCustomersModal()">👥 Customers</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tab-active"   onclick="switchTab('active')">Active</div>
+  <div class="tab"        id="tab-history"  onclick="switchTab('history')">History</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content" id="content"></div>
+
+<!-- FAB -->
+<button class="fab" onclick="openOrderModal()" aria-label="New order">+</button>
+
+<!-- ════════════════════════════════
+     NEW / EDIT ORDER MODAL
+     ════════════════════════════════ -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">New Order</span>
+      <button class="modal-close" onclick="closeOrderModal()">✕</button>
+    </div>
+
+    <!-- Voice -->
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">
+      <span id="voiceIcon">🎤</span>
+      <span id="voiceLabel">Speak Order</span>
+    </button>
+
+    <!-- Customer -->
+    <div class="form-section">
+      <label class="form-label">Customer</label>
+      <div class="chip-grid" id="customerGrid"></div>
+    </div>
+
+    <!-- Item -->
+    <div class="form-section">
+      <label class="form-label">Item</label>
+      <input class="form-input" id="itemInput" type="text" placeholder="e.g. 500g Ethiopia Natural" autocomplete="off">
+    </div>
+
+    <!-- Price -->
+    <div class="form-section">
+      <label class="form-label">Price</label>
+      <div class="price-row">
+        <input class="form-input" id="priceInput" type="number" placeholder="130" inputmode="decimal">
+        <span class="price-sym">₪</span>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-section">
+      <label class="form-label">Notes (optional)</label>
+      <input class="form-input" id="notesInput" type="text" placeholder="" autocomplete="off">
+    </div>
+
+    <button class="btn-submit" id="submitBtn" onclick="submitOrder()">Add Order</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     CUSTOMERS MODAL
+     ════════════════════════════════ -->
+<div class="modal-overlay" id="customersModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">Customers</span>
+      <button class="modal-close" onclick="closeCustomersModal()">✕</button>
+    </div>
+    <ul class="cust-list" id="custList"></ul>
+    <div class="add-row">
+      <input class="form-input" id="newCustInput" type="text" placeholder="New customer name" autocomplete="off">
+      <button class="btn-add" onclick="addCustomer()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     CONFIRM DIALOG
+     ════════════════════════════════ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle"></div>
+    <div class="confirm-msg"   id="confirmMsg"></div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-ok"     id="confirmOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE & STORAGE
+// ══════════════════════════════════════
+const S = {
+  orders:    [],
+  customers: [],
+  tab:       'active',
+  editId:    null,
+  selCustId: null,
+};
+
+function load() {
+  try {
+    const o = localStorage.getItem('orders_v1');
+    const c = localStorage.getItem('customers_v1');
+    if (o) S.orders    = JSON.parse(o);
+    if (c) S.customers = JSON.parse(c);
+  } catch(e) {}
+  if (S.customers.length === 0) {
+    S.customers = [{ id: uid(), name: 'Moshe' }, { id: uid(), name: 'David' }];
+    saveC();
+  }
+}
+function saveO() { localStorage.setItem('orders_v1',    JSON.stringify(S.orders)); }
+function saveC() { localStorage.setItem('customers_v1', JSON.stringify(S.customers)); }
+function uid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ══════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════
+function render() {
+  const active = S.orders.filter(o => o.status !== 'paid');
+  document.getElementById('tab-active').textContent  = active.length ? `Active (${active.length})` : 'Active';
+  document.getElementById('tab-history').textContent = 'History';
+  S.tab === 'active' ? renderActive(active) : renderHistory();
+}
+
+function renderActive(orders) {
+  const el = document.getElementById('content');
+  if (!orders.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">✅</div><p>No active orders.</p></div>`;
+    return;
+  }
+  const toPrep   = orders.filter(o => o.status === 'ordered').length;
+  const toPay    = orders.filter(o => o.status === 'ready').length;
+  const outstanding = orders.reduce((s, o) => s + (o.price || 0), 0);
+
+  let html = `
+    <div class="summary">
+      <div class="summary-item"><div class="summary-num">${toPrep}</div><div class="summary-label">To Prepare</div></div>
+      <div class="summary-item"><div class="summary-num">${toPay}</div><div class="summary-label">Collect Payment</div></div>
+      <div class="summary-item"><div class="summary-num">₪${outstanding}</div><div class="summary-label">Outstanding</div></div>
+    </div>`;
+
+  if (toPay > 0) {
+    html += `<div class="banner">💰 ${toPay} order${toPay > 1 ? 's' : ''} ready — collect payment!</div>`;
+  }
+
+  // Sort: ready first, then ordered; newest first within group
+  const sorted = [...orders].sort((a, b) => {
+    if (a.status === 'ready' && b.status !== 'ready') return -1;
+    if (b.status === 'ready' && a.status !== 'ready') return  1;
+    return b.createdAt - a.createdAt;
+  });
+  sorted.forEach(o => { html += cardHtml(o); });
+  el.innerHTML = html;
+}
+
+function renderHistory() {
+  const el    = document.getElementById('content');
+  const paid  = S.orders.filter(o => o.status === 'paid').sort((a,b) => b.paidAt - a.paidAt);
+  if (!paid.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">📋</div><p>No completed orders yet.</p></div>`;
+    return;
+  }
+  const now   = new Date();
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const mTotal = paid.filter(o => o.paidAt >= mStart).reduce((s,o) => s + (o.price||0), 0);
+  let html = `
+    <div class="summary">
+      <div class="summary-item"><div class="summary-num">${paid.length}</div><div class="summary-label">Total Paid</div></div>
+      <div class="summary-item"><div class="summary-num">₪${mTotal}</div><div class="summary-label">This Month</div></div>
+    </div>`;
+  paid.forEach(o => { html += cardHtml(o); });
+  el.innerHTML = html;
+}
+
+function cardHtml(o) {
+  const badge = {
+    ordered: `<span class="badge badge-ordered">🟡 Ordered</span>`,
+    ready:   `<span class="badge badge-ready">🟠 Ready</span>`,
+    paid:    `<span class="badge badge-paid">✅ Paid</span>`,
+  }[o.status];
+
+  let actions = '';
+  if (o.status === 'ordered') {
+    actions = `<button class="btn-action btn-ready" onclick="markReady('${o.id}')">Mark Ready</button>
+               <button class="btn-action btn-edit"  onclick="editOrder('${o.id}')">Edit</button>`;
+  } else if (o.status === 'ready') {
+    actions = `<button class="btn-action btn-paid"  onclick="markPaid('${o.id}')">Mark Paid ✓</button>
+               <button class="btn-action btn-edit"  onclick="editOrder('${o.id}')">Edit</button>`;
+  } else {
+    actions = `<button class="btn-action btn-delete" onclick="deleteOrder('${o.id}')">Delete</button>`;
+  }
+
+  const itemLine = [o.item, o.notes].filter(Boolean).join(' · ');
+
+  return `
+    <div class="order-card status-${o.status}">
+      <div class="order-top">
+        <span class="customer-name">${esc(o.customerName)}</span>
+        <span class="order-price">${o.price ? '₪' + o.price : '—'}</span>
+      </div>
+      <div class="order-item">${esc(itemLine || '—')}</div>
+      <div class="order-bottom">
+        <div class="order-meta">${badge}<span class="order-time">${ago(o.createdAt)}</span></div>
+        <div class="order-actions">${actions}</div>
+      </div>
+    </div>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ago(ts) {
+  const d = Date.now() - ts;
+  const m = Math.floor(d / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function switchTab(t) {
+  S.tab = t;
+  document.getElementById('tab-active').classList.toggle('active', t === 'active');
+  document.getElementById('tab-history').classList.toggle('active', t === 'history');
+  render();
+}
+
+// ══════════════════════════════════════
+// ORDER ACTIONS
+// ══════════════════════════════════════
+function markReady(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o) return;
+  o.status = 'ready';
+  o.preparedAt = Date.now();
+  saveO(); render();
+  notify('Order ready 🟠', `${o.customerName} — ${o.item} — collect payment!`);
+}
+
+function markPaid(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o) return;
+  showConfirm('Mark as Paid?', `${o.customerName} — ${o.item || ''} — ₪${o.price || '?'}`, () => {
+    o.status = 'paid';
+    o.paidAt = Date.now();
+    saveO(); render();
+  });
+}
+
+function deleteOrder(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o) return;
+  showConfirm('Delete this order?', `${o.customerName} — ${o.item || ''}`, () => {
+    S.orders = S.orders.filter(x => x.id !== id);
+    saveO(); render();
+  });
+}
+
+function editOrder(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o) return;
+  S.editId    = id;
+  S.selCustId = o.customerId;
+  openOrderModal();
+  document.getElementById('modalTitle').textContent    = 'Edit Order';
+  document.getElementById('submitBtn').textContent     = 'Save Changes';
+  document.getElementById('itemInput').value           = o.item  || '';
+  document.getElementById('priceInput').value          = o.price || '';
+  document.getElementById('notesInput').value          = o.notes || '';
+  renderChips();
+}
+
+// ══════════════════════════════════════
+// ORDER MODAL
+// ══════════════════════════════════════
+function openOrderModal() {
+  if (!S.editId) {
+    S.selCustId = null;
+    document.getElementById('modalTitle').textContent = 'New Order';
+    document.getElementById('submitBtn').textContent  = 'Add Order';
+    document.getElementById('itemInput').value        = '';
+    document.getElementById('priceInput').value       = '';
+    document.getElementById('notesInput').value       = '';
+  }
+  renderChips();
+  document.getElementById('orderModal').classList.add('open');
+}
+
+function closeOrderModal() {
+  document.getElementById('orderModal').classList.remove('open');
+  S.editId = null;
+  S.selCustId = null;
+  stopVoice();
+}
+
+function renderChips() {
+  document.getElementById('customerGrid').innerHTML = S.customers.map(c => `
+    <div class="chip ${S.selCustId === c.id ? 'selected' : ''}" onclick="selectCust('${c.id}')">
+      ${esc(c.name)}
+    </div>`).join('');
+}
+
+function selectCust(id) { S.selCustId = id; renderChips(); }
+
+function submitOrder() {
+  const cust  = S.customers.find(c => c.id === S.selCustId);
+  const item  = document.getElementById('itemInput').value.trim();
+  const price = parseFloat(document.getElementById('priceInput').value);
+  const notes = document.getElementById('notesInput').value.trim();
+
+  if (!cust)  { alert('Please select a customer.'); return; }
+  if (!item)  { alert('Please enter what was ordered.'); return; }
+
+  if (S.editId) {
+    const o = S.orders.find(x => x.id === S.editId);
+    if (o) { o.customerId = cust.id; o.customerName = cust.name; o.item = item; o.price = isNaN(price) ? null : price; o.notes = notes; }
+  } else {
+    S.orders.push({
+      id: uid(), customerId: cust.id, customerName: cust.name,
+      item, price: isNaN(price) ? null : price, notes,
+      status: 'ordered', createdAt: Date.now(), preparedAt: null, paidAt: null,
+    });
+    notify('New order 🟡', `${cust.name} — ${item}`);
+  }
+
+  saveO();
+  closeOrderModal();
+  switchTab('active');
+  render();
+}
+
+// ══════════════════════════════════════
+// CUSTOMERS MODAL
+// ══════════════════════════════════════
+function openCustomersModal() {
+  renderCustList();
+  document.getElementById('customersModal').classList.add('open');
+}
+function closeCustomersModal() {
+  document.getElementById('customersModal').classList.remove('open');
+  document.getElementById('newCustInput').value = '';
+}
+function renderCustList() {
+  const el = document.getElementById('custList');
+  if (!S.customers.length) { el.innerHTML = '<li style="color:var(--muted);padding:12px 0">No customers yet.</li>'; return; }
+  el.innerHTML = S.customers.map(c => `
+    <li class="cust-item">
+      <span>${esc(c.name)}</span>
+      <button class="btn-remove" onclick="removeCust('${c.id}')">×</button>
+    </li>`).join('');
+}
+function addCustomer() {
+  const input = document.getElementById('newCustInput');
+  const name  = input.value.trim();
+  if (!name) return;
+  if (S.customers.some(c => c.name.toLowerCase() === name.toLowerCase())) { alert('Already exists.'); return; }
+  S.customers.push({ id: uid(), name });
+  saveC(); input.value = '';
+  renderCustList();
+}
+function removeCust(id) {
+  const c = S.customers.find(x => x.id === id);
+  if (!c) return;
+  if (S.orders.some(o => o.customerId === id && o.status !== 'paid')) {
+    alert(`${c.name} has active orders. Cannot remove.`); return;
+  }
+  S.customers = S.customers.filter(x => x.id !== id);
+  saveC(); renderCustList();
+}
+document.getElementById('newCustInput').addEventListener('keydown', e => { if (e.key === 'Enter') addCustomer(); });
+
+// ══════════════════════════════════════
+// CONFIRM DIALOG
+// ══════════════════════════════════════
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent   = msg;
+  document.getElementById('confirmOkBtn').onclick     = () => { closeConfirm(); cb(); };
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
+
+// ══════════════════════════════════════
+// VOICE INPUT
+// ══════════════════════════════════════
+let recog = null;
+let listening = false;
+
+function toggleVoice() { listening ? stopVoice() : startVoice(); }
+
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Voice input is not supported in this browser. Please type the order.'); return; }
+
+  recog = new SR();
+  recog.continuous      = false;
+  recog.interimResults  = false;
+  // Use device language so Hebrew names are recognised naturally
+  recog.lang            = navigator.language || 'en-US';
+
+  recog.onstart = () => {
+    listening = true;
+    document.getElementById('voiceBtn').classList.add('listening');
+    document.getElementById('voiceIcon').textContent  = '🔴';
+    document.getElementById('voiceLabel').textContent = 'Listening… tap to stop';
+  };
+
+  recog.onresult = e => {
+    const text = e.results[0][0].transcript;
+    parseVoice(text);
+  };
+
+  recog.onerror = e => {
+    stopVoice();
+    if (e.error === 'not-allowed') alert('Microphone access denied. Enable it in Safari settings → this website → Microphone.');
+  };
+
+  recog.onend = () => stopVoice();
+  recog.start();
+}
+
+function stopVoice() {
+  if (recog) { try { recog.stop(); } catch(e){} recog = null; }
+  listening = false;
+  const btn = document.getElementById('voiceBtn');
+  if (btn) {
+    btn.classList.remove('listening');
+    document.getElementById('voiceIcon').textContent  = '🎤';
+    document.getElementById('voiceLabel').textContent = 'Speak Order';
+  }
+}
+
+function parseVoice(raw) {
+  let text = raw.trim();
+
+  // 1. Try to match a known customer name (case-insensitive)
+  let matchedCust = null;
+  for (const c of S.customers) {
+    const re = new RegExp(c.name, 'i');
+    if (re.test(text)) {
+      matchedCust = c;
+      text = text.replace(re, '').trim();
+      break;
+    }
+  }
+
+  // 2. Extract price  (e.g. "130 shekels", "130 nis", "130₪", or a bare 2-3 digit number at the end)
+  let price = null;
+  const priceRe = [
+    /(\d+)\s*(shekels?|nis|₪)/i,
+    /\b(\d{2,4})\b\s*$/,
+  ];
+  for (const re of priceRe) {
+    const m = text.match(re);
+    if (m) { price = parseInt(m[1]); text = text.replace(m[0], '').trim(); break; }
+  }
+
+  // 3. Remaining text → item description
+  const item = text.replace(/\s{2,}/g,' ').trim();
+
+  // Apply
+  if (matchedCust) { S.selCustId = matchedCust.id; renderChips(); }
+  if (item)  document.getElementById('itemInput').value  = item;
+  if (price) document.getElementById('priceInput').value = price;
+}
+
+// ══════════════════════════════════════
+// NOTIFICATIONS
+// ══════════════════════════════════════
+async function requestNotifPerm() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+function notify(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification(title, { body, icon: 'icon.svg' }); } catch(e){}
+  }
+}
+
+// ══════════════════════════════════════
+// SERVICE WORKER
+// ══════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ══════════════════════════════════════
+// CLOSE ON BACKDROP CLICK
+// ══════════════════════════════════════
+['orderModal','customersModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) { id === 'orderModal' ? closeOrderModal() : closeCustomersModal(); }
+  });
+});
+document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
+});
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+load();
+render();
+requestNotifPerm();
+</script>
+</body>
+</html>
