@@ -283,6 +283,20 @@
       animation: pulse 1.4s ease-in-out infinite;
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.72} }
+    .voice-transcript {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: var(--muted);
+      min-height: 20px;
+      display: none;
+    }
+    .voice-transcript.active { display: block; }
+    .voice-transcript .interim { color: #999; font-style: italic; }
+    .voice-transcript .final { color: var(--text); }
 
     /* ── FORM ── */
     .form-section { margin-bottom: 16px; }
@@ -454,6 +468,7 @@
       <span id="voiceIcon">🎤</span>
       <span id="voiceLabel">Speak Order</span>
     </button>
+    <div class="voice-transcript" id="voiceTranscript"></div>
 
     <!-- Customer -->
     <div class="form-section">
@@ -737,7 +752,10 @@ function closeOrderModal() {
   document.getElementById('orderModal').classList.remove('open');
   S.editId = null;
   S.selCustId = null;
-  stopVoice();
+  stopVoice(false);
+  const tx = document.getElementById('voiceTranscript');
+  tx.classList.remove('active');
+  tx.innerHTML = '';
 }
 
 function renderChips() {
@@ -849,18 +867,25 @@ function closeConfirm() { document.getElementById('confirmOverlay').classList.re
 // ══════════════════════════════════════
 let recog = null;
 let listening = false;
+let voiceFinal = '';   // accumulated final transcript
+let voiceTimer = null; // auto-stop timer after silence
 
-function toggleVoice() { listening ? stopVoice() : startVoice(); }
+function toggleVoice() { listening ? stopVoice(true) : startVoice(); }
 
 function startVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { alert('Voice input is not supported in this browser. Please type the order.'); return; }
 
+  voiceFinal = '';
+  const tx = document.getElementById('voiceTranscript');
+  tx.classList.add('active');
+  tx.innerHTML = '<span class="interim">Listening...</span>';
+
   recog = new SR();
-  recog.continuous      = false;
-  recog.interimResults  = false;
-  // Use device language so Hebrew names are recognised naturally
-  recog.lang            = navigator.language || 'en-US';
+  recog.continuous      = true;
+  recog.interimResults  = true;
+  // Force Hebrew — all customers and items are in Hebrew
+  recog.lang            = 'he-IL';
 
   recog.onstart = () => {
     listening = true;
@@ -870,20 +895,41 @@ function startVoice() {
   };
 
   recog.onresult = e => {
-    const text = e.results[0][0].transcript;
-    parseVoice(text);
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        voiceFinal += (voiceFinal ? ' ' : '') + t;
+      } else {
+        interim += t;
+      }
+    }
+    // Show live transcript
+    const tx = document.getElementById('voiceTranscript');
+    tx.innerHTML =
+      (voiceFinal ? '<span class="final">' + voiceFinal + '</span> ' : '') +
+      (interim ? '<span class="interim">' + interim + '</span>' : '');
+
+    // Reset auto-stop timer — stop 2s after last speech
+    clearTimeout(voiceTimer);
+    voiceTimer = setTimeout(() => stopVoice(true), 2000);
   };
 
   recog.onerror = e => {
-    stopVoice();
     if (e.error === 'not-allowed') alert('Microphone access denied. Enable it in Safari settings → this website → Microphone.');
+    stopVoice(false);
   };
 
-  recog.onend = () => stopVoice();
+  recog.onend = () => {
+    // If continuous mode was interrupted by the engine, parse what we have
+    if (listening) stopVoice(true);
+  };
+
   recog.start();
 }
 
-function stopVoice() {
+function stopVoice(applyResult) {
+  clearTimeout(voiceTimer);
   if (recog) { try { recog.stop(); } catch(e){} recog = null; }
   listening = false;
   const btn = document.getElementById('voiceBtn');
@@ -892,15 +938,20 @@ function stopVoice() {
     document.getElementById('voiceIcon').textContent  = '🎤';
     document.getElementById('voiceLabel').textContent = 'Speak Order';
   }
+  if (applyResult && voiceFinal.trim()) {
+    const tx = document.getElementById('voiceTranscript');
+    tx.innerHTML = '<span class="final">' + voiceFinal + '</span>';
+    parseVoice(voiceFinal);
+  }
 }
 
 function parseVoice(raw) {
   let text = raw.trim();
 
-  // 1. Try to match a known customer name (case-insensitive)
+  // 1. Try to match a known customer name (case-insensitive, Unicode-aware)
   let matchedCust = null;
   for (const c of S.customers) {
-    const re = new RegExp(c.name, 'i');
+    const re = new RegExp(c.name, 'iu');
     if (re.test(text)) {
       matchedCust = c;
       text = text.replace(re, '').trim();
@@ -908,11 +959,12 @@ function parseVoice(raw) {
     }
   }
 
-  // 2. Extract price  (e.g. "130 shekels", "130 nis", "130₪", or a bare 2-3 digit number at the end)
+  // 2. Extract price — Hebrew patterns first, then generic
   let price = null;
   const priceRe = [
-    /(\d+)\s*(shekels?|nis|₪)/i,
-    /\b(\d{2,4})\b\s*$/,
+    /(\d+)\s*(שקל|שקלים|ש"ח|₪)/i,            // Hebrew: "130 שקל", "130 ש״ח"
+    /(\d+)\s*(shekels?|nis|shekel)/i,           // English
+    /\b(\d{2,4})\b\s*$/,                        // bare number at end
   ];
   for (const re of priceRe) {
     const m = text.match(re);
